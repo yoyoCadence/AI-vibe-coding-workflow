@@ -5,10 +5,11 @@ import { pathToFileURL } from 'node:url';
 import { cmdInit } from './lib/init.mjs';
 import {
   cmdStatus, cmdPreflight, cmdHandoff, cmdReviewRequest,
-  cmdPrStatus, cmdMergeGate, cmdVerify, cmdSet, cmdHookStop,
+  cmdPrStatus, cmdMergeGate, cmdVerify, cmdSet, cmdHookStop, cmdProfile,
 } from './lib/commands.mjs';
+import { cmdUi } from './lib/ui.mjs';
 
-const VALUE_FLAGS = new Set(['target', 'phase', 'agent', 'notes', 'command']);
+const VALUE_FLAGS = new Set(['target', 'phase', 'agent', 'notes', 'command', 'port']);
 
 function parseArgs(argv) {
   const args = { _: [], passthrough: [] };
@@ -46,6 +47,8 @@ Commands:
   merge-gate      Full pre-merge checklist               [--fetch] [--agent <role>]
   verify          Run tests and record result            verify -- <test command>
   set             Validated state updates                set phase=build owner_agent=implementer next_action="..."
+  profile         Show or switch role->tool mapping      profile | profile set <name>
+  ui              Local web console on 127.0.0.1         [--port 7317]
   hook-stop       (internal) Claude Code Stop hook entry point
 
 All commands read/write .ai/state.json, .ai/handoff.md and .ai/task-log.md.
@@ -65,6 +68,8 @@ export function main(argv) {
       case 'merge-gate': return cmdMergeGate(args);
       case 'verify': return cmdVerify(args, args.passthrough);
       case 'set': return cmdSet(args, args._);
+      case 'profile': return cmdProfile(args, args._);
+      case 'ui': return cmdUi(args);
       case 'hook-stop': return cmdHookStop();
       case undefined:
       case 'help':

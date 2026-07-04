@@ -1,13 +1,24 @@
 {
-  "$doc": "VibeFlow config. Models here are the declared intent; Claude Code reads .claude/agents/*.md frontmatter, Codex uses `codex exec -m`. Keep them consistent. allow_auto_merge is ignored and always treated as false.",
+  "$doc": "VibeFlow config. Roles are fixed; tools are configurable: active_profile picks which tool/model plays each role. Switch with `vibe profile set <name>` or the UI (`vibe ui`). Claude Code reads .claude/agents/*.md frontmatter for subagent models — keep them consistent. allow_auto_merge is ignored and always treated as false. Legacy flat `agents` key from older configs is still honored when no profiles/active_profile are present.",
   "default_provider": "anthropic",
-  "agents": {
-    "spec_writer": { "provider": "anthropic", "model": "claude-opus-4-8" },
-    "architect": { "provider": "anthropic", "model": "claude-opus-4-8" },
-    "implementer": { "provider": "anthropic", "model": "claude-sonnet-5" },
-    "verifier": { "provider": "anthropic", "model": "claude-haiku-4-5" },
-    "reviewer": { "provider": "openai", "model": "gpt-5-codex" },
-    "fix_agent": { "provider": "anthropic", "model": "claude-sonnet-5" }
+  "active_profile": "claude-build-codex-review",
+  "profiles": {
+    "claude-build-codex-review": {
+      "spec_writer": { "tool": "claude", "provider": "anthropic", "model": "claude-opus-4-8" },
+      "architect": { "tool": "claude", "provider": "anthropic", "model": "claude-opus-4-8" },
+      "implementer": { "tool": "claude", "provider": "anthropic", "model": "claude-sonnet-5" },
+      "verifier": { "tool": "claude", "provider": "anthropic", "model": "claude-haiku-4-5" },
+      "reviewer": { "tool": "codex", "provider": "openai", "model": "gpt-5-codex" },
+      "fix_agent": { "tool": "claude", "provider": "anthropic", "model": "claude-sonnet-5" }
+    },
+    "codex-build-claude-review": {
+      "spec_writer": { "tool": "claude", "provider": "anthropic", "model": "claude-opus-4-8" },
+      "architect": { "tool": "codex", "provider": "openai", "model": "gpt-5-codex" },
+      "implementer": { "tool": "codex", "provider": "openai", "model": "gpt-5-codex" },
+      "verifier": { "tool": "codex", "provider": "openai", "model": "gpt-5-codex" },
+      "reviewer": { "tool": "claude", "provider": "anthropic", "model": "claude-opus-4-8" },
+      "fix_agent": { "tool": "codex", "provider": "openai", "model": "gpt-5-codex" }
+    }
   },
   "auto_review": true,
   "hooks_enabled": true,

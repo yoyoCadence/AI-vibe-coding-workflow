@@ -1,10 +1,12 @@
 # VibeFlow Agent Roles
 
-Six roles. One agent process can play several roles, but never two roles in
-the same message without an explicit handoff between them. Models per role
-live in `.ai/vibe-flow.config.json`; in Claude Code the subagent files
-`.claude/agents/vibe-*.md` carry the model in frontmatter; in Codex pass
-`codex exec -m <model>`.
+Six roles. **Roles are fixed; tools are interchangeable** — the active profile
+in `.ai/vibe-flow.config.json` decides whether Claude Code or Codex plays each
+role (`vibe profile` to inspect, `vibe profile set <name>` to switch). One
+agent process can play several roles, but never two roles in the same message
+without an explicit handoff between them, and the reviewer must always be an
+independent session. In Claude Code the subagent files `.claude/agents/vibe-*.md`
+carry the model in frontmatter; in Codex pass `codex exec -m <model>`.
 
 ---
 
@@ -37,8 +39,10 @@ live in `.ai/vibe-flow.config.json`; in Claude Code the subagent files
 - **Forbidden**: marking tests passed without running them; "fixing" a failing test by weakening it (that is a spec change → back to spec-writer).
 
 ## reviewer
-- **Mission**: adversarial acceptance review against spec + rubric. Runs in Codex.
-- **Trigger**: `.ai/review-request.md` generated; `$vibe-review`; PR opened/updated (CI).
+- **Mission**: adversarial acceptance review against spec + rubric. Runs in
+  whichever tool the active profile assigns (default: Codex) — always as a
+  fresh, independent session, never the context that wrote the code.
+- **Trigger**: `.ai/review-request.md` generated; `$vibe-review` / `/vibe-review`; PR opened/updated (CI).
 - **Inputs**: `.ai/review-request.md`, `.ai/current-spec.md`, the diff, `references/review-rubric.md`, `.ai/handoff.md`.
 - **Outputs**: `.ai/review-result.md` (verdict + reviewed_commit + [P0]-[P3] findings), state update (`review_status`, next phase), handoff.
 - **Forbidden**: editing implementation files; fixing issues itself; approving with unverified acceptance criteria; reviewing a different commit than the request names without saying so; merging.

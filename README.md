@@ -1,8 +1,14 @@
 # VibeFlow
 
-跨 **Claude Code**(實作)與 **Codex**(驗收)的 AI vibe coding workflow。
-核心思想:兩個 agent 不共享聊天記憶,所以**一切協調都走 `.ai/` 檔案 + 確定性 script**;
+跨 **Claude Code** 與 **Codex** 的 AI vibe coding workflow。
+**角色固定、工具可互換**:VibeFlow 不是「Claude 寫、Codex 審」,而是「Build Agent 寫、
+Review Agent 審」— 哪個工具扮演哪個角色由 profile 決定(預設:Claude build、Codex review,
+反過來也行)。兩個 agent 不共享聊天記憶,所以**一切協調都走 `.ai/` 檔案 + 確定性 script**;
 LLM 負責產生內容,script 負責記住狀態、檢查安全。
+
+```text
+Roles fixed. Tools configurable. Review independent. Scripts deterministic. Merge human-only.
+```
 
 ```
 Spec -> Build -> Verify -> Review -> Fix -> PR -> Merge Gate -> Done
@@ -65,16 +71,43 @@ node scripts/vibeflow/vibe.mjs set phase=build owner_agent=implementer next_acti
 也有等價的獨立入口:`vibe-init.mjs`、`vibe-status.mjs`、`vibe-preflight.mjs`、
 `vibe-handoff.mjs`、`vibe-review-request.mjs`、`vibe-pr-status.mjs`、`vibe-merge-gate.mjs`。
 
-## Model 設定
+## Profile(角色 → 工具/模型)
 
-`.ai/vibe-flow.config.json` 宣告每個角色的 provider/model,以及
-`auto_review`、`hooks_enabled`、`allow_auto_pr`、`require_pr`、`base_branch`。
-`allow_auto_merge` 一律視為 false(程式硬編碼)。
-Claude 端實際生效的是 `.claude/agents/vibe-*.md` frontmatter 的 `model:`;
-Codex 端用 `codex exec -m <model>`。改 model 時兩處保持一致。
+`.ai/vibe-flow.config.json` 的 `active_profile` 決定每個角色由哪個工具、哪個 model 扮演:
+
+```bash
+node scripts/vibeflow/vibe.mjs profile                                # 看目前分工
+node scripts/vibeflow/vibe.mjs profile set codex-build-claude-review  # 反向:Codex 寫、Claude 審
+```
+
+內建兩個 profile:`claude-build-codex-review`(預設)與 `codex-build-claude-review`;
+可在 config 自訂更多。舊版只有 `agents` 欄位的 config 仍然有效(向後相容)。
+其餘開關:`auto_review`、`hooks_enabled`、`allow_auto_pr`、`require_pr`、`base_branch`、
+`test_command`;`allow_auto_merge` 一律視為 false(程式硬編碼)。
+Claude 端 subagent 實際生效的是 `.claude/agents/vibe-*.md` frontmatter 的 `model:`;
+Codex 端用 `codex exec -m <model>`。改 profile 時兩處保持一致。
+
+**Review 獨立性鐵律**:不管誰寫誰審,reviewer 必須是**全新的獨立 session**,
+絕不能是剛寫完 code 的那個上下文。同工具自審(Claude 寫 + 新 Claude session 審)可以;
+同一個 session 自寫自審不行 — scripts 與 skills 都會提醒這件事。
+
+## UI 控制台
+
+```bash
+node scripts/vibeflow/vibe.mjs ui        # http://127.0.0.1:7317(--port 可改)
+```
+
+不用背命令:控制台顯示目前 phase、持球角色、**下一步該去哪個工具貼什麼指令**(附複製鈕)、
+workflow stepper、阻擋原因、profile 切換器、`.ai/` 檔案預覽,以及安全按鈕
+(status / preflight / handoff / review-request / pr-status / merge-gate)。
+安全設計:只綁 `127.0.0.1`;所有變更都經 `vibe.mjs`(不繞過檢查);POST 需自訂 header
+(擋惡意網頁 CSRF);`verify` 必須手動輸入測試指令並確認;**沒有** merge/force-push/reset 按鈕。
+詳見 [docs/quickstart.md](docs/quickstart.md)。
 
 ## 文件
 
+- [docs/quickstart.md](docs/quickstart.md) — **從零跑通的逐步指南(含 UI、雙向 profile、最小範例)**
+- [docs/profile-examples.md](docs/profile-examples.md) — profile 格式、切換、自訂
 - [docs/workflow.md](docs/workflow.md) — 完整流程與狀態機
 - [docs/handoff-schema.md](docs/handoff-schema.md) — `.ai/` 檔案與 state.json schema
 - [docs/review-rubric.md](docs/review-rubric.md) — 驗收 rubric(正式版在 skill 內)

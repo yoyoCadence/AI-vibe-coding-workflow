@@ -5,9 +5,12 @@ description: Core rules of the VibeFlow AI coding workflow (Spec -> Build -> Ver
 
 # VibeFlow — Core Rules (all agents, both Claude Code and Codex)
 
-VibeFlow is a multi-agent coding workflow. Claude Code typically implements;
-Codex typically reviews. The two agents never share chat history, so **all
-coordination goes through files in `.ai/` and through deterministic scripts**.
+VibeFlow is a multi-agent coding workflow. **Roles are fixed; tools are
+interchangeable**: the active profile in `.ai/vibe-flow.config.json` decides
+whether Claude Code or Codex plays each role (default profile: Claude builds,
+Codex reviews — the reverse works too). Agents never share chat history, so
+**all coordination goes through files in `.ai/` and deterministic scripts**.
+`/vibe-x` in Claude Code and `$vibe-x` in Codex invoke the same role.
 
 ## Pipeline
 
@@ -32,8 +35,10 @@ Spec -> Build -> Verify -> Review -> Fix -> PR -> Merge Gate -> Done
    `node scripts/vibeflow/vibe.mjs set phase=... owner_agent=... next_action="..." --agent <you>`
    then `node scripts/vibeflow/vibe.mjs handoff --agent <you>`, then fill in
    the manual "Agent notes" section of `.ai/handoff.md` by hand.
-5. **The reviewer never edits implementation files.** Fixes go through the
-   fix-agent on the working branch. Reviewer output is `.ai/review-result.md` only.
+5. **The reviewer never edits implementation files, and must be independent** —
+   a fresh session/context, never the one that wrote the code (regardless of
+   which tool it runs in). Fixes go through the fix-agent on the working
+   branch. Reviewer output is `.ai/review-result.md` only.
 6. **Never merge automatically.** The merge gate only reports READY/BLOCKED;
    a human performs the merge. `allow_auto_merge` is hard-coded off.
 7. **Never print, commit, or paste secrets** (tokens, .env contents, keys).
@@ -73,11 +78,16 @@ node scripts/vibeflow/vibe.mjs set key=value ... # validated state updates
 
 Always pass `--agent <your-role>` so the task log shows who did what.
 
-## Roles
+## Roles, profiles & models
 
 See `agents.md` in this folder for the six role cards
 (spec-writer, architect, implementer, verifier, reviewer, fix-agent).
-Per-role models are declared in `.ai/vibe-flow.config.json`.
+Roles never assume a specific tool. The active profile in
+`.ai/vibe-flow.config.json` maps each role to a tool/provider/model:
+inspect with `node scripts/vibeflow/vibe.mjs profile`, switch with
+`... profile set <name>`, or use the local web console (`... ui`).
+In Claude Code, subagent models live in `.claude/agents/*.md` frontmatter;
+in Codex pass `codex exec -m <model>`. Keep them consistent with the profile.
 
 ## Steps
 

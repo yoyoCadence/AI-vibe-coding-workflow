@@ -9,6 +9,7 @@
       "Bash(node scripts/vibeflow/vibe.mjs pr-status:*)",
       "Bash(node scripts/vibeflow/vibe.mjs merge-gate:*)",
       "Bash(node scripts/vibeflow/vibe.mjs set:*)",
+      "Bash(node scripts/vibeflow/vibe.mjs profile:*)",
       "Bash(node scripts/vibeflow/vibe.mjs hook-stop)",
       "Read(.ai/**)"
     ]

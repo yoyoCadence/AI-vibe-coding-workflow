@@ -1,8 +1,12 @@
 # Step: vibe-review — adversarial acceptance review
 
-**Role**: reviewer (normally Codex). **Phase**: `review`.
-**Trigger**: `.ai/review-request.md` exists for the current HEAD; `$vibe-review`;
-a PR review is requested.
+**Role**: reviewer (tool per active profile; default Codex). **Phase**: `review`.
+**Trigger**: `.ai/review-request.md` exists for the current HEAD; `$vibe-review`
+or `/vibe-review`; a PR review is requested.
+
+**Independence is non-negotiable**: you must be a fresh session/context. If
+this conversation contains the implementation work you are about to review,
+STOP and tell the user to open a new session. Self-review is not review.
 
 You are the last line of defense before merge. Your job is to find problems,
 not to be agreeable. An approval you cannot defend with evidence is a failure.

@@ -1,6 +1,9 @@
 # 端到端範例:一次任務的完整時間軸
 
 情境:在既有專案 `my-app` 加一個 `/healthz` endpoint。
+本例使用預設 profile(Claude build / Codex review);反向分工與逐步教學見
+[quickstart.md](quickstart.md) 與 [profile-examples.md](profile-examples.md)。
+全程也可以開著 UI 看狀態:`node scripts/vibeflow/vibe.mjs ui`。
 
 ## 0. 一次性安裝
 

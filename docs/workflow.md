@@ -20,12 +20,31 @@ idle -> spec -> build -> verify -> review -> merge_gate -> done
 | `merge_gate` | verifier / 人 | verdict = approved | `vibe merge-gate` READY → **人**執行 merge |
 | `done` | — | PR merged | state 標記 done、最終 handoff |
 
-## 誰在哪個工具做事
+## 誰在哪個工具做事(由 profile 決定)
 
-- **Claude Code**:spec-writer、architect、implementer、verifier、fix-agent
-  (各自是 `.claude/agents/vibe-*.md` subagent,model 可各自設定)。
-- **Codex**:reviewer(手動 `$vibe-review`、`codex exec`、或 GitHub Action)。
-- **人**:核准 spec(status: approved)、開 PR(或授權 agent 開)、執行 merge。
+角色是固定的;**工具是可插拔的 adapter**。`.ai/vibe-flow.config.json` 的
+`active_profile` 決定每個角色由 Claude Code 還是 Codex 扮演
+(`vibe profile` 查看、`vibe profile set <name>` 切換,或用 UI 切):
+
+- **預設 `claude-build-codex-review`**:Claude 做 spec-writer / architect /
+  implementer / verifier / fix-agent(各自是 `.claude/agents/vibe-*.md`
+  subagent,model 可各自設定);Codex 做 reviewer(`$vibe-review`、
+  `codex exec`、或 GitHub Action)。
+- **反向 `codex-build-claude-review`**:Codex 做 build 側(`$vibe-build`、
+  `$vibe-fix`、`$vibe-merge-gate` prompts);Claude 做 reviewer
+  (`.claude/agents/vibe-reviewer.md` subagent,或新 session 跑 `/vibe-review`)。
+- **人(不隨 profile 改變)**:核准 spec(status: approved)、開 PR(或授權
+  agent 開)、執行 merge。
+
+**Review 獨立性**:reviewer 必須是全新獨立 session,不能是剛寫 code 的上下文。
+同工具可以(新 session + 明確讀 `.ai/review-request.md`),同 session 自審不行。
+
+## UI 控制台
+
+`node scripts/vibeflow/vibe.mjs ui` 開本地控制台(127.0.0.1:7317):顯示 phase、
+下一步(該去哪個工具貼什麼)、stepper、阻擋原因、profile 切換、`.ai/` 預覽與安全
+按鈕。事實來源仍是 `.ai/` 檔案;UI 所有變更都經 `vibe.mjs`,沒有 merge 類按鈕。
+操作流程見 [quickstart.md](quickstart.md)。
 
 ## Handoff 機制(為什麼不會「忘記」)
 

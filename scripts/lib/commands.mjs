@@ -1,6 +1,6 @@
 // VibeFlow — workflow commands (everything except init lives here)
 import path from 'node:path';
-import { run, git, readText, writeText, replaceSection, readSection, nowISO, P, levelTag, exists } from './util.mjs';
+import { run, git, readText, writeText, readJSON, writeJSON, replaceSection, readSection, nowISO, P, levelTag, exists } from './util.mjs';
 import {
   loadConfig, loadState, requireState, saveState, logTask, aiPath, requireRoot, findRoot,
   PHASES, ROLES, REVIEW_STATUS, MERGE_STATUS, agentFromArgs,
@@ -298,7 +298,7 @@ export function cmdReviewRequest(args) {
   const stat = git(root, 'diff', '--stat', '--no-color', `${from}..HEAD`).stdout || '(no changes)';
   const t = state.tests_run || {};
   const testsStale = t.commit && t.commit !== info.head;
-  const reviewerModel = cfg.agents.reviewer?.model || 'gpt-5-codex';
+  const reviewer = cfg.roles.reviewer;
 
   const md = `# VibeFlow Review Request
 
@@ -332,7 +332,8 @@ ${stat}
 
 ## Reviewer instructions
 You are the VibeFlow **reviewer** (read-only on implementation files).
-1. Read \`.agents/skills/vibe-flow/steps/review.md\` and follow it exactly.
+You MUST be a fresh, independent agent session — never the context that wrote this code.
+1. Read \`.agents/skills/vibe-flow/steps/review.md\` (same file under \`.claude/skills/\`) and follow it exactly.
 2. Review commit \`${info.head}\` on branch \`${info.branch}\` against the spec and the rubric.
 3. Write your findings to \`.ai/review-result.md\` using its existing template format
    (verdict, reviewed_commit, findings tagged [P0]..[P3]).
@@ -355,9 +356,21 @@ You are the VibeFlow **reviewer** (read-only on implementation files).
 
   P.info('Review request written to .ai/review-request.md');
   P.info('');
-  P.info('Run the reviewer from a terminal (Codex CLI):');
-  P.info(`  codex exec -m ${reviewerModel} "Read .ai/review-request.md and follow its Reviewer instructions exactly."`);
-  P.info('or inside Codex, type: $vibe-review');
+  printReviewerHint(reviewer);
+}
+
+/** Tool-appropriate instructions for running the reviewer (profile-aware). */
+function printReviewerHint(reviewer) {
+  if ((reviewer.tool || 'codex') === 'claude') {
+    P.info(`Run the reviewer in a NEW Claude Code session (model: ${reviewer.model}) — never the session that wrote the code:`);
+    P.info('  /vibe-review');
+    P.info('or from a terminal:');
+    P.info(`  claude --model ${reviewer.model} -p "Read .ai/review-request.md and follow its Reviewer instructions exactly."`);
+  } else {
+    P.info(`Run the reviewer with Codex (model: ${reviewer.model}) in a fresh session:`);
+    P.info(`  codex exec -m ${reviewer.model} "Read .ai/review-request.md and follow its Reviewer instructions exactly."`);
+    P.info('or inside Codex, type: $vibe-review');
+  }
 }
 
 // ---------------------------------------------------------------- pr status
@@ -611,6 +624,51 @@ export function cmdSet(args, positional) {
   for (const a of applied) P.info(`set ${a}`);
 }
 
+// ---------------------------------------------------------------- profile (show / switch role->tool mapping)
+
+function printRoleTable(roles) {
+  for (const [role, m] of Object.entries(roles)) {
+    P.info(`  ${role.padEnd(13)} ${String(m.tool || '?').padEnd(7)} ${String(m.provider || '?').padEnd(10)} ${m.model || '?'}`);
+  }
+}
+
+export function cmdProfile(args, positional) {
+  const root = requireRoot();
+  const cfg = loadConfig(root);
+  const agent = agentFromArgs(args);
+  const [sub, name] = positional;
+
+  if (sub === 'set') {
+    if (!name || !cfg.profiles[name]) {
+      P.fail('profile', `unknown profile "${name || ''}" (available: ${Object.keys(cfg.profiles).join(', ')})`);
+      process.exit(1);
+    }
+    const p = aiPath(root, 'vibe-flow.config.json');
+    const user = readJSON(p) || {};
+    user.active_profile = name;
+    // materialize the profile table on first switch so the user can edit models in place
+    if (!user.profiles) user.profiles = cfg.profiles;
+    writeJSON(p, user);
+    const state = loadState(root);
+    logTask(root, agent, state?.phase, `profile set: ${name}`);
+    P.info(`active_profile = ${name}`);
+    printRoleTable(cfg.profiles[name]);
+    P.info('');
+    P.warn('note', 'Claude subagent models live in .claude/agents/vibe-*.md frontmatter — keep them consistent with this profile.');
+    P.warn('note', 'Switching mid-task is fine: the next agent reads .ai/handoff.md as usual. A completed review stays valid for its reviewed_commit.');
+    return;
+  }
+
+  if (sub && sub !== 'show') {
+    P.fail('profile', `usage: vibe profile [set <name>]  (available: ${Object.keys(cfg.profiles).join(', ')})`);
+    process.exit(1);
+  }
+  P.info(`active_profile: ${cfg.active_profile}${cfg.profile_mode ? '' : '  (legacy "agents" config in effect — run: vibe profile set <name> to adopt profiles)'}`);
+  P.info('effective role -> tool mapping:');
+  printRoleTable(cfg.roles);
+  P.info(`available profiles: ${Object.keys(cfg.profiles).join(', ')}`);
+}
+
 // ---------------------------------------------------------------- hook-stop (Claude Code Stop hook; must never block)
 
 export function cmdHookStop() {
@@ -689,7 +747,8 @@ ${stat}
 
 ## Reviewer instructions
 You are the VibeFlow **reviewer** (read-only on implementation files).
-1. Read \`.agents/skills/vibe-flow/steps/review.md\` and follow it exactly.
+You MUST be a fresh, independent agent session — never the context that wrote this code.
+1. Read \`.agents/skills/vibe-flow/steps/review.md\` (same file under \`.claude/skills/\`) and follow it exactly.
 2. Review commit \`${info.head}\` on branch \`${info.branch}\` against the spec and the rubric.
 3. Write findings to \`.ai/review-result.md\` (verdict, reviewed_commit, [P0]..[P3] findings).
 4. Record the outcome via \`vibe set\` and \`vibe handoff --agent reviewer\` as described in steps/review.md.

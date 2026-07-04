@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VibeFlow 控制台</title>
+<style>
+  :root {
+    --bg:#f5f6f8; --card:#ffffff; --text:#1c2330; --muted:#67707f; --line:#e3e6eb;
+    --accent:#3459d6; --ok:#1f8a4c; --warn:#b57d10; --fail:#c0392b; --chip:#eef1f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171c; --card:#1d2128; --text:#e8eaee; --muted:#98a0ad; --line:#2c313a;
+            --accent:#7d97f2; --ok:#4fc07e; --warn:#e0a93e; --fail:#e4695a; --chip:#262b34; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.6 "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--line); background:var(--card); position:sticky; top:0; z-index:5; }
+  header h1 { font-size:17px; margin:0 8px 0 0; }
+  .chip { background:var(--chip); border:1px solid var(--line); border-radius:999px; padding:2px 12px; font-size:12.5px; color:var(--muted); }
+  .chip b { color:var(--text); font-weight:600; }
+  .chip.phase b { color:var(--accent); }
+  main { display:grid; grid-template-columns:minmax(340px,1fr) minmax(340px,1fr); gap:14px; padding:16px 20px 40px; max-width:1280px; margin:0 auto; }
+  @media (max-width:900px){ main { grid-template-columns:1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .card h2 { font-size:13px; margin:0 0 10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .next { border-left:4px solid var(--accent); }
+  .next .title { font-size:16px; font-weight:600; margin-bottom:6px; }
+  .next.human { border-left-color:var(--warn); }
+  .where { display:inline-block; font-size:12px; padding:1px 10px; border-radius:999px; background:var(--chip); border:1px solid var(--line); margin-right:6px; }
+  .cmd { display:flex; gap:8px; align-items:flex-start; margin:8px 0; }
+  .cmd code { flex:1; background:var(--chip); border:1px solid var(--line); border-radius:6px; padding:7px 10px; font:12.5px/1.5 Consolas, monospace; word-break:break-all; white-space:pre-wrap; }
+  button { font:13px "Segoe UI","Microsoft JhengHei",sans-serif; padding:6px 14px; border-radius:6px; border:1px solid var(--line); background:var(--chip); color:var(--text); cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button:disabled { opacity:.5; cursor:wait; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .notes { color:var(--muted); font-size:12.5px; margin-top:4px; }
+  .notes li { margin:2px 0; }
+  /* stepper */
+  .step { display:flex; gap:10px; padding:7px 0; border-bottom:1px dashed var(--line); align-items:baseline; }
+  .step:last-child { border-bottom:none; }
+  .dot { width:11px; height:11px; border-radius:50%; background:var(--line); flex:none; align-self:center; }
+  .step.done .dot { background:var(--ok); }
+  .step.current .dot { background:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .step.blocked .dot { background:var(--fail); }
+  .step .lbl { width:132px; font-weight:600; }
+  .step.current .lbl { color:var(--accent); }
+  .step .who { color:var(--muted); font-size:12.5px; }
+  /* dashboard table */
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td { padding:4px 6px 4px 0; vertical-align:top; border-bottom:1px solid var(--line); }
+  td.k { color:var(--muted); width:120px; white-space:nowrap; }
+  tr:last-child td { border-bottom:none; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .fail { color:var(--fail); }
+  /* actions */
+  .actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .actions label { font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:4px; }
+  input[type=text], select { font:13px Consolas, monospace; padding:6px 8px; border-radius:6px; border:1px solid var(--line); background:var(--chip); color:var(--text); }
+  .verify-row { display:flex; gap:8px; margin-top:10px; }
+  .verify-row input { flex:1; }
+  pre.out { background:var(--chip); border:1px solid var(--line); border-radius:6px; padding:10px; font:12px/1.5 Consolas, monospace; max-height:280px; overflow:auto; white-space:pre-wrap; word-break:break-word; margin:0; }
+  /* tabs */
+  .tabs { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+  .tabs button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  pre.file { background:var(--chip); border:1px solid var(--line); border-radius:6px; padding:10px; font:12px/1.5 Consolas, monospace; max-height:380px; overflow:auto; white-space:pre-wrap; word-break:break-word; margin:0; }
+  .hint { font-size:12px; color:var(--muted); margin-top:6px; }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:0 20px 30px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>VibeFlow 控制台</h1>
+  <span class="chip">專案 <b id="h-project">–</b></span>
+  <span class="chip">任務 <b id="h-task">–</b></span>
+  <span class="chip phase">phase <b id="h-phase">–</b></span>
+  <span class="chip">branch <b id="h-branch">–</b></span>
+  <span class="chip" id="h-updated">–</span>
+</header>
+<main>
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <div class="card next" id="next-card">
+      <h2>下一步</h2>
+      <div class="title" id="n-title">載入中…</div>
+      <div><span class="where" id="n-where">–</span><span class="where" id="n-role" style="display:none"></span><span class="where" id="n-model" style="display:none"></span></div>
+      <div class="cmd"><code id="n-cmd">–</code><button onclick="copyText('n-cmd', this)">複製</button></div>
+      <ul class="notes" id="n-notes"></ul>
+    </div>
+
+    <div class="card" id="blocked-card" style="display:none">
+      <h2>阻擋原因(來自最近一次檢查)</h2>
+      <div id="blocked-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>動作(按鈕都經由 vibe.mjs,不繞過安全檢查)</h2>
+      <div class="actions">
+        <button onclick="run({cmd:'status'})">status</button>
+        <button onclick="run({cmd:'preflight', fetch:el('a-fetch').checked, phase:el('a-phase').value})">preflight</button>
+        <select id="a-phase"><option value="build">build</option><option value="spec">spec</option><option value="review">review</option><option value="merge">merge</option></select>
+        <label><input type="checkbox" id="a-fetch">--fetch</label>
+        <button onclick="run({cmd:'handoff'})">handoff</button>
+        <button onclick="run({cmd:'review-request'})">review-request</button>
+        <button onclick="run({cmd:'pr-status'})">pr-status</button>
+        <button class="primary" onclick="run({cmd:'merge-gate', fetch:true})">merge-gate --fetch</button>
+      </div>
+      <div class="verify-row">
+        <input type="text" id="a-verify" placeholder="verify 測試指令,例如 npm test(需明確輸入,不會自動執行)">
+        <button onclick="runVerify()">verify</button>
+      </div>
+      <div class="hint">沒有 auto-merge、force-push、reset 這類按鈕 — 那些永遠是人工步驟。</div>
+    </div>
+
+    <div class="card">
+      <h2>輸出</h2>
+      <pre class="out" id="out">(還沒執行任何指令)</pre>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <div class="card">
+      <h2>工作流程</h2>
+      <div id="stepper"></div>
+    </div>
+
+    <div class="card">
+      <h2>狀態(.ai/state.json)</h2>
+      <table id="dash"></table>
+    </div>
+
+    <div class="card">
+      <h2>Profile(角色 → 工具/模型)</h2>
+      <div class="actions" style="margin-bottom:8px">
+        <select id="p-select"></select>
+        <button onclick="applyProfile()">套用 profile</button>
+      </div>
+      <table id="p-table"></table>
+      <div class="hint" id="p-hint">切換 profile 只影響「之後的步驟建議與 handoff」;已完成的 review 對其 reviewed_commit 仍有效。Claude 端 model 記得同步 .claude/agents/vibe-*.md。</div>
+    </div>
+
+    <div class="card">
+      <h2>檔案預覽(.ai/)</h2>
+      <div class="tabs">
+        <button data-f="handoff" class="active" onclick="showFile(this)">handoff</button>
+        <button data-f="reviewRequest" onclick="showFile(this)">review-request</button>
+        <button data-f="reviewResult" onclick="showFile(this)">review-result</button>
+        <button data-f="spec" onclick="showFile(this)">current-spec</button>
+      </div>
+      <pre class="file" id="file-view">–</pre>
+      <div class="hint">「vibeflow:*:start/end」marker 之間是機器生成區塊;handoff 的 Agent notes 區塊供 agent 手寫。請用編輯器改檔,不要在這裡改。</div>
+    </div>
+  </section>
+</main>
+<footer>VibeFlow — 事實來源永遠是 .ai/ 檔案與 git;此控制台只是視窗。Merge 永遠由人執行。</footer>
+
+<script>
+let SNAP = null, activeFile = 'handoff', busy = false;
+const el = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const STEPS = [
+  { key:'spec', label:'Spec', role:'spec_writer' },
+  { key:'build', label:'Build', role:'implementer' },
+  { key:'verify', label:'Verify', role:'verifier' },
+  { key:'review', label:'Review', role:'reviewer' },
+  { key:'fix', label:'Fix(視需要)', role:'fix_agent' },
+  { key:'merge_gate', label:'PR / Merge Gate', role:'verifier' },
+  { key:'done', label:'Done', role:null },
+];
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/snapshot');
+    SNAP = await r.json();
+    render();
+  } catch (e) {
+    el('h-updated').textContent = '連線失敗:' + e.message;
+  }
+}
+
+function render() {
+  const s = SNAP.state || {}, g = SNAP.git, c = SNAP.config, n = SNAP.next;
+  el('h-project').textContent = s.project || '–';
+  el('h-task').textContent = s.current_task_id || '–';
+  el('h-phase').textContent = s.phase || '–';
+  el('h-branch').textContent = g ? g.branch : '非 git repo';
+  el('h-updated').textContent = '更新於 ' + new Date(SNAP.now).toLocaleTimeString();
+
+  // next step
+  el('next-card').classList.toggle('human', !!n.human);
+  el('n-title').textContent = (n.human ? '🧑 ' : '') + n.title;
+  el('n-where').textContent = n.where || '–';
+  el('n-role').style.display = n.role ? '' : 'none';
+  el('n-role').textContent = n.role ? '角色:' + n.role : '';
+  el('n-model').style.display = n.model ? '' : 'none';
+  el('n-model').textContent = n.model || '';
+  el('n-cmd').textContent = n.command || '–';
+  el('n-notes').innerHTML = (n.notes || []).map(x => '<li>' + esc(x) + '</li>').join('');
+
+  // stepper
+  const cur = STEPS.findIndex(x => x.key === s.phase);
+  el('stepper').innerHTML = STEPS.map((st, i) => {
+    let cls = 'step';
+    if (s.phase === 'done' || (cur >= 0 && i < cur)) cls += ' done';
+    if (i === cur && s.phase !== 'done') cls += ' current';
+    if (st.key === 'merge_gate' && s.merge_status === 'blocked') cls += ' blocked';
+    const m = st.role && c.roles[st.role] ? c.roles[st.role] : null;
+    const who = st.role ? `${st.role} → ${m ? (m.tool === 'codex' ? 'Codex' : 'Claude Code') + ' · ' + m.model : ''}` : '人工確認後收尾';
+    return `<div class="${cls}"><span class="dot"></span><span class="lbl">${st.label}</span><span class="who">${esc(who)}</span></div>`;
+  }).join('');
+
+  // dashboard
+  const t = s.tests_run || {};
+  const drift = g && s.working_branch && !g.protected && g.branch !== s.working_branch;
+  const rows = [
+    ['phase / owner', `${esc(s.phase)} / ${esc(s.owner_agent || '-')}`],
+    ['next_action', esc(s.next_action || '(未設定)')],
+    ['working_branch', esc(s.working_branch || '-') + (drift ? ' <span class="fail">⚠ 實際在 ' + esc(g.branch) + '</span>' : '')],
+    ['base_branch', esc(s.base_branch) + (g && g.behind > 0 ? ` <span class="fail">落後 ${g.behind}</span>` : g ? ' <span class="ok">已同步</span>' : '')],
+    ['last_commit', esc(g ? g.head + ' ' + (g.subject || '') : s.last_commit || '-')],
+    ['working tree', g ? (g.dirty ? `<span class="warn">${g.dirty} 個未 commit 檔案</span>` : '<span class="ok">乾淨</span>') : '-'],
+    ['tests_run', t.status === 'passed' ? `<span class="ok">passed</span> @ ${esc(String(t.commit || '').slice(0,7))}` : t.status === 'failed' ? '<span class="fail">failed</span>' : '尚未記錄'],
+    ['review_status', badge(s.review_status, { approved:'ok', changes_requested:'fail', requested:'warn' })],
+    ['merge_status', badge(s.merge_status, { ready:'ok', blocked:'fail' })],
+    ['PR', s.pr_number ? '#' + s.pr_number : (c.require_pr ? '尚未開(require_pr=true)' : '不要求')],
+    ['spec', SNAP.spec.exists ? `${esc(SNAP.spec.task_id || '?')} · ${esc(SNAP.spec.status || '?')} · AC ${SNAP.spec.acDone}/${SNAP.spec.acDone + SNAP.spec.acOpen}` : '無'],
+    ['blockers', (s.blockers || []).length ? '<span class="fail">' + esc(s.blockers.join(';')) + '</span>' : '無'],
+    ['updated', esc((s.updated_at || '') + ' by ' + (s.updated_by || '-'))],
+  ];
+  el('dash').innerHTML = rows.map(([k, v]) => `<tr><td class="k">${k}</td><td>${v}</td></tr>`).join('');
+
+  // blocked reasons
+  const fails = [];
+  for (const [src, obj] of [['preflight', s.preflight], ['merge-gate', s.merge_gate]]) {
+    if (obj && obj.checks) for (const [id, ck] of Object.entries(obj.checks)) {
+      if (ck.level === 'fail') fails.push(`<div><span class="fail">[${src}]</span> <b>${esc(id)}</b> — ${esc(ck.detail)}</div>`);
+    }
+  }
+  el('blocked-card').style.display = fails.length ? '' : 'none';
+  el('blocked-list').innerHTML = fails.join('');
+
+  // profile
+  const sel = el('p-select');
+  sel.innerHTML = Object.keys(c.profiles).map(p => `<option ${p === c.active_profile ? 'selected' : ''}>${esc(p)}</option>`).join('');
+  el('p-table').innerHTML = Object.entries(c.roles).map(([r, m]) =>
+    `<tr><td class="k">${esc(r)}</td><td>${esc(m.tool)} · ${esc(m.provider)} · ${esc(m.model)}</td></tr>`).join('');
+  if (!c.profile_mode) el('p-hint').textContent = '目前使用舊版 agents 設定;套用任一 profile 即切換到 profile 模式。';
+
+  // file preview
+  el('file-view').textContent = SNAP.files[activeFile] || '(空)';
+}
+
+function badge(v, map) {
+  const cls = map[v] || '';
+  return cls ? `<span class="${cls}">${esc(v)}</span>` : esc(v || 'none');
+}
+
+function showFile(btn) {
+  activeFile = btn.dataset.f;
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b === btn));
+  if (SNAP) el('file-view').textContent = SNAP.files[activeFile] || '(空)';
+}
+
+async function run(payload) {
+  if (busy) return;
+  busy = true;
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  el('out').textContent = '執行中… ' + payload.cmd;
+  try {
+    const r = await fetch('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-VibeFlow': '1' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    el('out').textContent = `$ ${d.argv || payload.cmd}\n(exit ${d.code})\n\n${d.output || ''}`;
+  } catch (e) {
+    el('out').textContent = '執行失敗:' + e.message;
+  }
+  busy = false;
+  document.querySelectorAll('button').forEach(b => b.disabled = false);
+  refresh();
+}
+
+function runVerify() {
+  const command = el('a-verify').value.trim();
+  if (!command) { alert('請先輸入測試指令(例如 npm test)'); return; }
+  if (!confirm('將在專案根目錄執行:\n\n  ' + command + '\n\n結果會記錄到 .ai/state.json。確定?')) return;
+  run({ cmd: 'verify', command });
+}
+
+function applyProfile() {
+  const name = el('p-select').value;
+  if (!confirm('切換 active profile 為「' + name + '」?\n\n影響:之後的下一步建議、review-request 指示會依新分工;已完成的 review 結果不受影響。')) return;
+  run({ cmd: 'profile-set', name });
+}
+
+async function copyText(id, btn) {
+  try { await navigator.clipboard.writeText(el(id).textContent); btn.textContent = '已複製'; setTimeout(() => btn.textContent = '複製', 1200); }
+  catch { /* clipboard unavailable */ }
+}
+
+refresh();
+setInterval(() => { if (!busy) refresh(); }, 5000);
+</script>
+</body>
+</html>
