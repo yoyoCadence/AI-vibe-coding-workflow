@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "project": "",
+  "current_task_id": null,
+  "phase": "idle",
+  "owner_agent": null,
+  "base_branch": "main",
+  "working_branch": null,
+  "pr_number": null,
+  "last_commit": null,
+  "dirty_files": [],
+  "tests_run": {
+    "status": "none",
+    "command": null,
+    "exit_code": null,
+    "commit": null,
+    "at": null
+  },
+  "review_status": "none",
+  "merge_status": "none",
+  "blockers": [],
+  "next_action": "Run /vibe-spec to define the first task",
+  "preflight": { "at": null, "ok": null, "phase": null, "checks": {} },
+  "merge_gate": { "at": null, "ok": null, "checks": {} },
+  "updated_at": null,
+  "updated_by": null
+}

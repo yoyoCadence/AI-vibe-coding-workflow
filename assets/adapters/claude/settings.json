@@ -1,0 +1,25 @@
+{
+  "$comment": "vibeflow: Stop hook refreshes .ai/handoff.md and (when phase+tree allow) generates .ai/review-request.md. It never edits code, never merges, always exits 0. Permissions below are intentionally narrow.",
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/vibeflow/vibe.mjs:*)",
+      "Bash(node scripts/vibeflow/vibe-status.mjs:*)",
+      "Bash(node scripts/vibeflow/vibe-preflight.mjs:*)",
+      "Bash(node scripts/vibeflow/vibe-handoff.mjs:*)",
+      "Read(.ai/**)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/vibeflow/vibe.mjs hook-stop",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

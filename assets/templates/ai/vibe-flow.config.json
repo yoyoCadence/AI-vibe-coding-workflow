@@ -1,0 +1,20 @@
+{
+  "$doc": "VibeFlow config. Models here are the declared intent; Claude Code reads .claude/agents/*.md frontmatter, Codex uses `codex exec -m`. Keep them consistent. allow_auto_merge is ignored and always treated as false.",
+  "default_provider": "anthropic",
+  "agents": {
+    "spec_writer": { "provider": "anthropic", "model": "claude-opus-4-8" },
+    "architect": { "provider": "anthropic", "model": "claude-opus-4-8" },
+    "implementer": { "provider": "anthropic", "model": "claude-sonnet-5" },
+    "verifier": { "provider": "anthropic", "model": "claude-haiku-4-5" },
+    "reviewer": { "provider": "openai", "model": "gpt-5-codex" },
+    "fix_agent": { "provider": "anthropic", "model": "claude-sonnet-5" }
+  },
+  "auto_review": true,
+  "hooks_enabled": true,
+  "allow_auto_pr": false,
+  "allow_auto_merge": false,
+  "require_pr": true,
+  "base_branch": "main",
+  "protected_branches": ["main", "master"],
+  "test_command": null
+}
