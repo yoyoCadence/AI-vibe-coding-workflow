@@ -83,7 +83,8 @@ Codex 端用 `codex exec -m <model>`。改 model 時兩處保持一致。
 
 ## 安全邊界(設計即防呆)
 
-- preflight / merge-gate 擋:main/master 直改、髒 tree、落後 base、conflict、無 spec、無 PR、secret 進 diff、超出 Scope 的檔案。
+- preflight / merge-gate 擋:main/master 直改、髒 tree、落後 base、conflict、無 spec、**spec 未經人核准(status: approved)**、無 PR、secret 進 diff、超出 Scope 的檔案。
+- Claude 權限白名單只涵蓋狀態/報告類子命令;`verify`(會執行任意測試指令)與 `init` 刻意排除,每次都需要人批准。
 - reviewer 只能寫 `.ai/review-result.md`,不碰實作檔。
 - 每個新 commit 自動使測試與 review 失效(必須在 HEAD 上重跑)。
 - Hook 只做 handoff/review-request,永遠 exit 0,不 merge、不寫 code。

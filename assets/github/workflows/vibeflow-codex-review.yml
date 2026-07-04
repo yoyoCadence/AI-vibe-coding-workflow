@@ -30,7 +30,8 @@ jobs:
           node-version: 20
 
       - name: Install Codex CLI
-        run: npm install -g @openai/codex
+        # Pinned on purpose — bump deliberately after checking release notes.
+        run: npm install -g @openai/codex@0.140.0
 
       - name: Run Codex review
         env:
@@ -42,14 +43,13 @@ jobs:
         run: |
           printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key
           git fetch origin "$BASE_REF" --quiet
-          codex exec --sandbox workspace-write -m gpt-5-codex "You are the VibeFlow reviewer running in CI.
-          Rules: read-only on implementation files; your ONLY output is the file codex-review.md in the repo root.
+          codex exec --sandbox read-only -m gpt-5-codex --output-last-message codex-review.md "You are the VibeFlow reviewer running in CI. You have a read-only sandbox: do not attempt to write or modify any file.
           1. If .agents/skills/vibe-flow/steps/review.md and .agents/skills/vibe-flow/references/review-rubric.md exist, follow them; otherwise do a rigorous spec-vs-diff review.
           2. Spec (if present): .ai/current-spec.md. Context: .ai/handoff.md, .ai/review-request.md.
           3. Review the diff: git diff origin/$BASE_REF...$HEAD_SHA
-          4. Write codex-review.md in the .ai/review-result.md template format: verdict (approved|changes_requested|blocked), reviewed_commit: $HEAD_SHA, findings as '- [P0]..[P3] file:line - issue', acceptance criteria verification with evidence.
-          5. Never include secret values in the report; reference file:line only. Do not modify any other file. Do not merge."
-          test -s codex-review.md || { echo 'codex produced no review file' ; exit 1; }
+          4. Your FINAL message must be ONLY the review, in the .ai/review-result.md template format: verdict (approved|changes_requested|blocked), reviewed_commit: $HEAD_SHA, findings as '- [P0]..[P3] file:line - issue', acceptance criteria verification with evidence.
+          5. Never include secret values in the report; reference file:line only. Do not merge."
+          test -s codex-review.md || { echo 'codex produced no review output' ; exit 1; }
 
       - name: Post review comment
         env:

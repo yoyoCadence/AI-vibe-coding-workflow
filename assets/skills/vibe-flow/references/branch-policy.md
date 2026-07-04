@@ -10,8 +10,10 @@
 - One task = one branch = one spec = one PR. No stacking tasks on one branch.
 - Created from an up-to-date base:
   `git switch <base> && git pull --ff-only && git switch -c feat/T-00X-<slug>`.
-- Record it: `vibe set working_branch=<name>` (preflight also syncs it) —
-  this is what catches "agent woke up on the wrong branch".
+- Record it: `vibe set working_branch=<name>`. Scripts record it automatically
+  only when it is unset; changing it is always an explicit `vibe set`, so a
+  wrong-branch drift keeps warning instead of silently self-healing — this is
+  what catches "agent woke up on the wrong branch".
 
 ## Sync policy
 - Before build and before merge-gate: branch must not be behind base

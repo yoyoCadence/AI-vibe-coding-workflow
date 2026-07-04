@@ -45,11 +45,19 @@ export function cmdInit(args) {
   else if (git(target, 'rev-parse', '--verify', '--quiet', 'main').ok) base = 'main';
   else if (git(target, 'rev-parse', '--verify', '--quiet', 'master').ok) base = 'master';
 
-  // 1) .ai/ from templates (never clobber live state unless --force)
+  // 1) .ai/ from templates. --force may reset them, but NEVER while a task is
+  //    in flight — that would erase the live handoff/spec/review state.
+  const liveState = loadState(target);
+  const ACTIVE_PHASES = ['spec', 'build', 'verify', 'review', 'fix', 'merge_gate'];
+  const taskInFlight = !!(liveState && ACTIVE_PHASES.includes(liveState.phase));
+  if (force && taskInFlight) {
+    notes.push(`--force ignored for .ai/ — task ${liveState.current_task_id || '?'} is in phase "${liveState.phase}". Finish it or run: vibe set phase=done, then re-run with --force.`);
+  }
+  const aiForce = force && !taskInFlight;
   const tplDir = path.join(assets, 'templates', 'ai');
   for (const f of fs.readdirSync(tplDir)) {
     const dest = path.join(target, '.ai', f);
-    if (exists(dest) && !force) { skipped.push(rel(target, dest)); continue; }
+    if (exists(dest) && !aiForce) { skipped.push(rel(target, dest)); continue; }
     let content = readText(path.join(tplDir, f));
     if (f === 'state.json') {
       const s = JSON.parse(content);

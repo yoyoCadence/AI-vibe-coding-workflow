@@ -126,8 +126,17 @@ function syncStateFromGit(state, info) {
   if (info.isRepo) {
     state.last_commit = info.head;
     state.dirty_files = info.dirty.slice(0, 100);
-    if (!info.detached && !info.protected) state.working_branch = info.branch;
+    // Record working_branch only when unset. Changing it requires an explicit
+    // `vibe set working_branch=...` — otherwise a wrong-branch drift would
+    // self-heal into looking correct on the next script run.
+    if (!state.working_branch && !info.detached && !info.protected) state.working_branch = info.branch;
   }
+}
+
+function specApprovalInfo(spec) {
+  const usable = spec.exists && !spec.placeholder && spec.hasAC;
+  const status = (spec.meta?.status || '').toLowerCase();
+  return { usable, status, approved: usable && status === 'approved' };
 }
 
 // ---------------------------------------------------------------- status
@@ -204,14 +213,21 @@ export function cmdPreflight(args) {
     else if (pr.exists) checks.push(check('pr', 'PR status', 'pass', `#${pr.pr.number} ${pr.pr.state}${pr.pr.isDraft ? ' (draft)' : ''} ${pr.pr.url || ''}`));
     else checks.push(check('pr', 'PR status', pr.error ? 'warn' : 'pass', pr.error ? `gh error: ${pr.error}` : 'no PR for this branch yet'));
     if (pr.exists) state.pr_number = pr.pr.number;
+    else if (!pr.error && state.pr_number != null) state.pr_number = null; // clear stale PR number
   }
 
   const spec = specInfo(root);
-  const specOk = spec.exists && !spec.placeholder && spec.hasAC;
-  checks.push(check('spec', 'current spec', specOk ? 'pass' : (phase === 'spec' ? 'warn' : 'fail'),
-    specOk
-      ? `${spec.meta.task_id || '?'} status=${spec.meta.status || '?'} AC ${spec.acDone}/${spec.acDone + spec.acOpen} done`
-      : 'no usable spec in .ai/current-spec.md — run /vibe-spec first'));
+  const sa = specApprovalInfo(spec);
+  // every phase except `spec` itself requires a human-approved spec
+  const specLevel = phase === 'spec'
+    ? (sa.usable ? 'pass' : 'warn')
+    : (sa.approved ? 'pass' : 'fail');
+  checks.push(check('spec', 'current spec', specLevel,
+    !sa.usable
+      ? 'no usable spec in .ai/current-spec.md — run /vibe-spec first'
+      : sa.approved || phase === 'spec'
+        ? `${spec.meta.task_id || '?'} status=${spec.meta.status || '?'} AC ${spec.acDone}/${spec.acDone + spec.acOpen} done`
+        : `spec status is "${spec.meta.status || 'missing'}" — a human must set "status: approved" before ${phase}`));
 
   if (info.isRepo && state.working_branch && !info.protected && !info.detached && info.branch !== state.working_branch) {
     checks.push(check('branch_matches_state', 'branch matches state', 'warn',
@@ -266,6 +282,10 @@ export function cmdReviewRequest(args) {
   if (!info.isRepo || !info.head) { P.fail('review-request', 'need a git repo with at least one commit'); process.exit(1); }
   if (!spec.exists || spec.placeholder || !spec.hasAC) {
     P.fail('review-request', 'no usable spec (.ai/current-spec.md) — a review needs acceptance criteria');
+    process.exit(1);
+  }
+  if ((spec.meta.status || '').toLowerCase() !== 'approved') {
+    P.fail('review-request', `spec status is "${spec.meta.status || 'missing'}" — a human must set "status: approved" before review`);
     process.exit(1);
   }
   const from = info.mergeBase || info.baseRef;
@@ -352,6 +372,12 @@ export function cmdPrStatus(args) {
   if (!pr.exists) {
     P.info(`No PR for the current branch.${pr.note ? ` (${pr.note})` : ''}`);
     P.info('Create one manually when ready:  gh pr create --fill --draft');
+    if (!pr.error && state.pr_number != null) {
+      state.pr_number = null;
+      saveState(root, state, agent);
+      logTask(root, agent, state.phase, 'pr-status: cleared stale pr_number (no PR for branch)');
+      P.info('Cleared stale pr_number from state.');
+    }
     process.exit(0);
   }
   const d = pr.pr;
@@ -396,9 +422,14 @@ export function cmdMergeGate(args) {
       ? (info.dirty.length ? 'clean (only .ai/ state files pending — commit them with the merge)' : 'clean')
       : `${dirtyCode.length} dirty file(s): ${dirtyCode.slice(0, 5).map((l) => l.slice(3)).join(', ')}`));
 
-  const specOk = spec.exists && !spec.placeholder && spec.hasAC;
-  checks.push(check('spec_exists', 'spec exists', specOk ? 'pass' : 'fail',
-    specOk ? `${spec.meta.task_id || '?'} (${spec.meta.status || 'no status'})` : 'no usable spec with acceptance criteria'));
+  const sa = specApprovalInfo(spec);
+  const specOk = sa.usable;
+  checks.push(check('spec_exists', 'spec exists & approved', sa.approved ? 'pass' : 'fail',
+    !specOk
+      ? 'no usable spec with acceptance criteria'
+      : sa.approved
+        ? `${spec.meta.task_id || '?'} (approved)`
+        : `${spec.meta.task_id || '?'} status="${spec.meta.status || 'missing'}" — a human must set "status: approved"`));
 
   checks.push(check('ac_complete', 'acceptance criteria done',
     specOk && spec.acOpen === 0 && spec.acDone > 0 ? 'pass' : 'fail',
@@ -604,6 +635,7 @@ export function cmdHookStop() {
       && info.isRepo && info.head
       && codeDirty(info).length === 0
       && spec.exists && !spec.placeholder && spec.hasAC
+      && (spec.meta.status || '').toLowerCase() === 'approved'
       && (info.aheadBase ?? 0) > 0;
     if (readyForReview) {
       const existing = readText(aiPath(root, 'review-request.md')) || '';

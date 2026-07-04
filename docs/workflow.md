@@ -44,8 +44,9 @@ idle -> spec -> build -> verify -> review -> merge_gate -> done
 
 1. Claude 完成工作停下 → Stop hook 跑 `vibe.mjs hook-stop`:
    - 重生 `.ai/handoff.md` 快照
-   - 若 `auto_review=true`、phase ∈ {build, verify, fix}、tree 乾淨、spec 存在、
-     且 review-request 還沒涵蓋這個 HEAD → 自動產生 `.ai/review-request.md`
+   - 若 `auto_review=true`、phase ∈ {build, verify, fix}、tree 乾淨(`.ai/` 除外)、
+     spec 存在**且 status: approved**、review-request 還沒涵蓋這個 HEAD
+     → 自動產生 `.ai/review-request.md`
 2. 你切到 Codex 視窗,輸入 `$vibe-review`(或跑
    `codex exec "Read .ai/review-request.md and follow its Reviewer instructions exactly."`)。
 3. Codex 寫 `.ai/review-result.md`、用 `vibe set` 更新 state、更新 handoff。

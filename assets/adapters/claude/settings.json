@@ -1,11 +1,15 @@
 {
-  "$comment": "vibeflow: Stop hook refreshes .ai/handoff.md and (when phase+tree allow) generates .ai/review-request.md. It never edits code, never merges, always exits 0. Permissions below are intentionally narrow.",
+  "$comment": "vibeflow: Stop hook refreshes .ai/handoff.md and (when phase+tree+approved spec allow) generates .ai/review-request.md. It never edits code, never merges, always exits 0. The allowlist below covers only state/reporting subcommands; `verify` is deliberately EXCLUDED because it executes an arbitrary test command via the shell — Claude must ask permission for each verify run. `init` is excluded because it writes many files.",
   "permissions": {
     "allow": [
-      "Bash(node scripts/vibeflow/vibe.mjs:*)",
-      "Bash(node scripts/vibeflow/vibe-status.mjs:*)",
-      "Bash(node scripts/vibeflow/vibe-preflight.mjs:*)",
-      "Bash(node scripts/vibeflow/vibe-handoff.mjs:*)",
+      "Bash(node scripts/vibeflow/vibe.mjs status:*)",
+      "Bash(node scripts/vibeflow/vibe.mjs preflight:*)",
+      "Bash(node scripts/vibeflow/vibe.mjs handoff:*)",
+      "Bash(node scripts/vibeflow/vibe.mjs review-request:*)",
+      "Bash(node scripts/vibeflow/vibe.mjs pr-status:*)",
+      "Bash(node scripts/vibeflow/vibe.mjs merge-gate:*)",
+      "Bash(node scripts/vibeflow/vibe.mjs set:*)",
+      "Bash(node scripts/vibeflow/vibe.mjs hook-stop)",
       "Read(.ai/**)"
     ]
   },
