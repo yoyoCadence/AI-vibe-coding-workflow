@@ -152,10 +152,20 @@ export function cmdInit(args) {
   for (const n of notes) P.warn('note', n);
   P.info('');
   P.info('Next steps:');
-  P.info('  1. Review .ai/vibe-flow.config.json (models, base_branch, auto_review)');
-  P.info('  2. Commit the new files.');
-  P.info('  3. In Claude Code:  /vibe-spec  to start your first task.');
-  P.info('  4. In Codex:       $vibe-review  when a review is requested.');
+  let n = 1;
+  if (!isRepo) {
+    P.info(`  ${n++}. Initialize git (REQUIRED — preflight/merge-gate need it):`);
+    P.info('       git init -b main');
+    P.info('       git add -A');
+    P.info('       git commit -m "chore: install VibeFlow"');
+  } else {
+    P.info(`  ${n++}. Commit the new files:`);
+    P.info('       git add -A');
+    P.info('       git commit -m "chore: install VibeFlow"');
+  }
+  P.info(`  ${n++}. Review .ai/vibe-flow.config.json (profile, models, base_branch, auto_review)`);
+  P.info(`  ${n++}. Open the console:  node scripts/vibeflow/vibe.mjs ui   (it shows the next step from here on)`);
+  P.info(`  ${n++}. Start your first task:  /vibe-spec  in Claude Code (or $vibe-spec in Codex, per profile).`);
 }
 
 function rel(root, p) {
