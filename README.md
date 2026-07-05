@@ -10,6 +10,13 @@ LLM 負責產生內容,script 負責記住狀態、檢查安全。
 Roles fixed. Tools configurable. Review independent. Scripts deterministic. Merge human-only.
 ```
 
+## 照這張跑
+
+![VibeFlow 使用說明:照這張跑](docs/vibeflow-operation-guide.zh.png)
+
+先開 UI 看「下一步」,照提示去 Claude / Codex 貼指令即可,不用背流程。
+逐步文字版見 [docs/quickstart.md](docs/quickstart.md)。
+
 ```
 Spec -> Build -> Verify -> Review -> Fix -> PR -> Merge Gate -> Done
                               ^________|
